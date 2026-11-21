@@ -34,7 +34,14 @@
 	"observability": {
 		"enabled": true
 	},
-	"upload_source_maps": true
+	"upload_source_maps": true,
+	"d1_databases": [
+		{
+			"binding": "umkm_website_generator_db",
+			"database_name": "umkm-website-generator-db",
+			"database_id": "1cc788eb-92de-48d4-9a6a-7757d7edeaa3"
+		}
+	]
 	/**
 	 * Smart Placement
 	 * https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
