@@ -131,6 +131,8 @@ export default function CreateWebsitePage() {
   const [logoName, setLogoName] = useState("");
   const [photoNames, setPhotoNames] = useState<string[]>([]);
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitMessage, setSubmitMessage] = useState("");
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -158,10 +160,75 @@ export default function CreateWebsitePage() {
     (item) => item.id === selectedPalette
   )!;
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setSubmitted(true);
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  event.preventDefault();
+
+  if (isSubmitting) return;
+
+  setIsSubmitting(true);
+  setSubmitted(false);
+  setSubmitMessage("");
+
+  try {
+    const formData = new FormData(event.currentTarget);
+
+    const payload = {
+      businessName: formData.get("businessName"),
+      category: formData.get("category"),
+      tagline: formData.get("tagline"),
+      description: formData.get("description"),
+      whatsapp: formData.get("whatsapp"),
+      email: formData.get("email"),
+      packageName: selectedPackage,
+      palette: selectedPalette,
+      products: Array.from({ length: 3 }, (_, index) => ({
+        name: formData.get(`productName${index + 1}`),
+        price: formData.get(`productPrice${index + 1}`),
+        description: formData.get(`productDescription${index + 1}`),
+      })),
+      advantages: formData.get("advantages"),
+      testimonials: formData.get("testimonials"),
+      animationStyle: formData.get("animationStyle"),
+      address: formData.get("address"),
+      mapsUrl: formData.get("mapsUrl"),
+      openingHours: formData.get("openingHours"),
+      directions: formData.get("directions"),
+    };
+
+    const response = await fetch("/api/orders", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const result: {
+  success: boolean;
+  message?: string;
+  orderId?: string;
+  websiteId?: string;
+} = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.message || "Gagal menyimpan pesanan.");
+    }
+
+    if (!result.websiteId) {
+  throw new Error("ID website tidak ditemukan.");
+}
+
+window.location.assign(`/preview/${result.websiteId}`);
+  } catch (error) {
+    setSubmitMessage(
+      error instanceof Error
+        ? error.message
+        : "Terjadi kesalahan saat menyimpan pesanan."
+    );
+  } finally {
+    setIsSubmitting(false);
   }
+}
 
   return (
     <main className="min-h-screen bg-[#F5F1E8] text-[#263F35]">
@@ -642,18 +709,26 @@ export default function CreateWebsitePage() {
               </p>
 
               <button
-                type="submit"
-                className="mt-6 w-full rounded-full bg-[#D98566] px-6 py-4 font-bold text-white transition hover:bg-[#C87355]"
-              >
-                Periksa Informasi Bisnis →
-              </button>
+  type="submit"
+  disabled={isSubmitting}
+  className="mt-6 w-full rounded-full bg-[#D98566] px-6 py-4 font-bold text-white transition hover:bg-[#C87355] disabled:cursor-not-allowed disabled:opacity-60"
+>
+  {isSubmitting
+    ? "Menyimpan Pesanan..."
+    : "Simpan Pesanan →"}
+</button>
 
-              {submitted && (
-                <p className="mt-4 rounded-xl bg-white/10 p-4 text-sm leading-6 text-white">
-                  Form berhasil divalidasi di browser. Penyimpanan data,
-                  upload server, dan generate AI belum diaktifkan.
-                </p>
-              )}
+              {submitMessage && (
+  <p
+    className={`mt-4 rounded-xl p-4 text-sm leading-6 ${
+      submitted
+        ? "bg-green-100 text-green-800"
+        : "bg-red-100 text-red-800"
+    }`}
+  >
+    {submitMessage}
+  </p>
+)}
             </section>
           </div>
 
