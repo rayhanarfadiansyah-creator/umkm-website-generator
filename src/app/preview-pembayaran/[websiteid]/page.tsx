@@ -37,24 +37,13 @@ const palettes: Record<
     text: string;
   }
 > = {
-  forest: {
-    background: "#F5F1E8",
-    primary: "#263F35",
-    accent: "#D98566",
-    text: "#263F35",
-  },
-  terracotta: {
-    background: "#F6EDE2",
-    primary: "#794C3B",
-    accent: "#D58A68",
-    text: "#794C3B",
-  },
-  ocean: {
-    background: "#F0F5F1",
-    primary: "#294B5A",
-    accent: "#77A9A0",
-    text: "#294B5A",
-  },
+  forest: { background: "#F5F1E8", primary: "#263F35", accent: "#D98566", text: "#263F35" },
+  terracotta: { background: "#F6EDE2", primary: "#794C3B", accent: "#D58A68", text: "#794C3B" },
+  ocean: { background: "#F0F5F1", primary: "#294B5A", accent: "#77A9A0", text: "#294B5A" },
+  "deep-teal": { background: "#EAF5F2", primary: "#123F46", accent: "#19A7A0", text: "#123F46" },
+  sunset: { background: "#FFF2E8", primary: "#743B54", accent: "#F09A67", text: "#743B54" },
+  lavender: { background: "#F5F0FA", primary: "#51456F", accent: "#B7A5D8", text: "#51456F" },
+  midnight: { background: "#F2F0EA", primary: "#17243A", accent: "#D5AE68", text: "#17243A" },
 };
 
 export default function PreviewPage() {
@@ -158,6 +147,13 @@ export default function PreviewPage() {
     typeof content.tagline === "string"
       ? content.tagline
       : "Selamat datang di website kami.";
+
+  const about = typeof content.about === "string" && content.about.trim()
+    ? content.about
+    : description;
+  const heroBackground = typeof content.heroBackground === "string" && content.heroBackground.startsWith("data:image/")
+    ? content.heroBackground
+    : "";
 
   const products: Product[] = Array.isArray(content.products)
     ? (content.products as Product[])
@@ -296,11 +292,11 @@ export default function PreviewPage() {
           ) : (
             <>
               <p className="font-extrabold text-amber-800">
-                Menunggu Verifikasi Pembayaran
+                Menunggu Konfirmasi Pihak Admin
               </p>
 
               <p className="mt-2 text-sm leading-6 text-amber-800">
-                Terima kasih! Pembayaran kamu sedang menunggu pemeriksaan admin.
+                Terima kasih! Pembayaran kamu sedang menunggu pemeriksaan dan konfirmasi dari pihak admin.
                 Website akan diterbitkan otomatis setelah pembayaran dikonfirmasi.
               </p>
             </>
@@ -332,18 +328,18 @@ export default function PreviewPage() {
           </div>
 
           {/* Hero */}
-          <section className="px-6 py-20 text-center sm:py-28">
-            <p className="text-sm font-semibold opacity-70">
-              Selamat datang
-            </p>
-
-            <h2 className="mx-auto mt-4 max-w-3xl text-4xl font-extrabold sm:text-6xl">
+          <section
+            className={`relative overflow-hidden px-6 py-20 sm:px-12 sm:py-28 ${website.package === "basic" ? "text-left" : website.package === "pro" ? "text-left sm:py-24" : "text-center sm:py-32"}`}
+            style={heroBackground && isPremium ? { backgroundImage: `linear-gradient(90deg, rgba(12,25,28,.78), rgba(12,25,28,.38)), url(${heroBackground})`, backgroundSize: "cover", backgroundPosition: "center", color: "white" } : {}}
+          >
+            {website.package === "premium" && <p className="text-xs font-bold uppercase tracking-[0.22em] opacity-75">Selamat datang di</p>}
+            <h2 className={`mt-4 max-w-3xl text-4xl font-extrabold sm:text-6xl ${website.package === "premium" ? "mx-auto" : ""}`}>
               {tagline}
             </h2>
-
-            <p className="mx-auto mt-6 max-w-2xl leading-7 opacity-80">
+            <p className={`mt-6 max-w-2xl leading-7 opacity-80 ${website.package === "premium" ? "mx-auto" : ""}`}>
               {description}
             </p>
+            {website.package !== "basic" && whatsappUrl && <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="mt-8 inline-flex rounded-full px-7 py-3 font-bold" style={{ backgroundColor: palette.accent, color: "white" }}>Hubungi Kami</a>}
           </section>
 
           {/* Produk dan layanan */}
@@ -432,15 +428,17 @@ export default function PreviewPage() {
           )}
 
           {/* Tentang Kami */}
+          {isProOrPremium && about.trim() && (
           <section className="px-6 py-14 sm:px-12">
             <h2 className="text-3xl font-extrabold">
               Tentang Kami
             </h2>
 
             <p className="mt-5 max-w-3xl leading-8 opacity-80">
-              {description}
+              {about}
             </p>
           </section>
+          )}
 
           {/* Lokasi Premium */}
           {isPremium && (
@@ -532,7 +530,8 @@ export default function PreviewPage() {
               color: "#263F35",
             }}
           >
-            {website.businessName}
+            <div className="font-bold">{website.businessName}</div>
+            <div className="mt-2 text-xs opacity-80">Website dibuat dengan webUMKM · R Studio Web</div>
           </footer>
         </div>
 </section>

@@ -6,12 +6,17 @@ type Product = {
   name?: string;
   description?: string;
   price?: string | number | null;
+  image?: string;
 };
 
 type WebsiteContent = {
   category?: string;
   tagline?: string;
   description?: string;
+  about?: string;
+  heroBackground?: string;
+  logo?: string;
+  gallery?: string[];
   whatsapp?: string;
   email?: string;
   products?: Product[];
@@ -28,7 +33,7 @@ type Website = {
   id: string;
   business_name: string;
   package: "basic" | "pro" | "premium";
-  palette: "forest" | "terracotta" | "ocean";
+  palette: string;
   status: string;
   content_json: string;
 };
@@ -85,7 +90,7 @@ export default async function PublicWebsitePage({
     website.package === "pro" || website.package === "premium";
   const isPremium = website.package === "premium";
 
-  const palettes = {
+  const palettes: Record<string, { background: string; primary: string; accent: string; card: string; text: string }> = {
     forest: {
       background: "#F5F1E8",
       primary: "#263F35",
@@ -100,13 +105,11 @@ export default async function PublicWebsitePage({
       card: "#FFFFFF",
       text: "#492C25",
     },
-    ocean: {
-      background: "#EDF4F5",
-      primary: "#24566A",
-      accent: "#4C9AAB",
-      card: "#FFFFFF",
-      text: "#203D49",
-    },
+    ocean: { background: "#EDF4F5", primary: "#24566A", accent: "#4C9AAB", card: "#FFFFFF", text: "#203D49" },
+    "deep-teal": { background: "#EAF5F2", primary: "#123F46", accent: "#19A7A0", card: "#FFFFFF", text: "#123F46" },
+    sunset: { background: "#FFF2E8", primary: "#743B54", accent: "#F09A67", card: "#FFFFFF", text: "#743B54" },
+    lavender: { background: "#F5F0FA", primary: "#51456F", accent: "#B7A5D8", card: "#FFFFFF", text: "#51456F" },
+    midnight: { background: "#F2F0EA", primary: "#17243A", accent: "#D5AE68", card: "#FFFFFF", text: "#17243A" },
   };
 
   const colors = palettes[website.palette] || palettes.forest;
@@ -121,6 +124,8 @@ export default async function PublicWebsitePage({
     : "";
 
   const mapsUrl = safeHttpUrl(content.mapsUrl);
+  const logo = typeof content.logo === "string" && content.logo.startsWith("data:image/") ? content.logo : "";
+  const gallery = Array.isArray(content.gallery) ? content.gallery.filter((item): item is string => typeof item === "string" && item.startsWith("data:image/")) : [];
   const products = Array.isArray(content.products)
     ? content.products.filter(
         (product) => product && typeof product.name === "string" && product.name.trim()
@@ -146,9 +151,10 @@ export default async function PublicWebsitePage({
         style={{ backgroundColor: colors.primary, color: "#FFFFFF" }}
       >
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
-          <h1 className="text-xl font-bold tracking-tight">
-            {website.business_name}
-          </h1>
+          <div className="flex items-center gap-3">
+            {logo ? <img src={logo} alt={`Logo ${website.business_name}`} className="h-11 w-11 rounded-xl bg-white object-contain p-1" /> : <span className="grid h-10 w-10 place-items-center rounded-xl bg-white/15 text-sm font-black">{website.business_name.slice(0, 1).toUpperCase()}</span>}
+            <h1 className="text-xl font-bold tracking-tight">{website.business_name}</h1>
+          </div>
 
           {content.category && (
             <span className="rounded-full border border-white/30 px-3 py-1 text-xs">
@@ -158,8 +164,12 @@ export default async function PublicWebsitePage({
         </div>
       </header>
 
-      <section className={`px-6 py-24 text-center ${animationClass}`}>
-        <div className="mx-auto max-w-3xl">
+      <section
+        className={`${animationClass} ${isPremium ? "px-6 py-32 text-center md:py-40" : isPro ? "px-6 py-24 text-left md:py-28" : "px-6 py-20 text-left"}`}
+        style={isPremium && content.heroBackground?.startsWith("data:image/") ? { backgroundImage: `linear-gradient(90deg, rgba(10,22,27,.78), rgba(10,22,27,.35)), url(${content.heroBackground})`, backgroundSize: "cover", backgroundPosition: "center", color: "#FFFFFF" } : {}}
+      >
+        <div className={`${isPremium ? "mx-auto max-w-4xl" : isPro ? "mx-auto grid max-w-6xl items-center gap-10 md:grid-cols-[1.25fr_.75fr]" : "mx-auto max-w-5xl"}`}>
+          <div>
           <p
             className="mb-4 text-sm font-semibold uppercase tracking-[0.2em]"
             style={{ color: colors.accent }}
@@ -188,6 +198,15 @@ export default async function PublicWebsitePage({
               Hubungi Kami via WhatsApp
             </a>
           )}
+          </div>
+          {isPro && (
+            <div className="hidden rounded-3xl p-8 shadow-xl md:block" style={{ backgroundColor: colors.card }}>
+              <p className="text-xs font-bold uppercase tracking-widest" style={{ color: colors.accent }}>Kenali lebih dekat</p>
+              <h3 className="mt-3 text-2xl font-bold">{website.business_name}</h3>
+              <p className="mt-3 text-sm leading-7 opacity-75">{content.about || content.description || "Temukan produk dan layanan unggulan kami."}</p>
+              <div className="mt-6 h-1.5 w-20 rounded-full" style={{ backgroundColor: colors.accent }} />
+            </div>
+          )}
         </div>
       </section>
 
@@ -206,13 +225,14 @@ export default async function PublicWebsitePage({
               </h2>
             </div>
 
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <div className={`grid gap-6 ${isPremium ? "lg:grid-cols-3" : isPro ? "sm:grid-cols-2 lg:grid-cols-3" : "sm:grid-cols-2"}`}>
               {products.map((product, index) => (
                 <article
                   key={`${product.name}-${index}`}
-                  className="rounded-2xl p-6 shadow-sm"
+                  className={`${isPremium ? "rounded-3xl border border-black/5 p-8 shadow-xl" : isPro ? "rounded-2xl border border-black/10 p-6 shadow-md" : "rounded-xl border border-black/10 p-5"}`}
                   style={{ backgroundColor: colors.card }}
                 >
+                  {product.image && <img src={product.image} alt={product.name || "Foto produk"} className="mb-5 h-52 w-full rounded-2xl object-cover" />}
                   <h3 className="text-xl font-bold">{product.name}</h3>
 
                   {product.description && (
@@ -231,6 +251,17 @@ export default async function PublicWebsitePage({
                   )}
                 </article>
               ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {gallery.length > 0 && (
+        <section className="px-6 py-16">
+          <div className="mx-auto max-w-6xl">
+            <h2 className="mb-8 text-center text-3xl font-bold">Galeri Foto</h2>
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+              {gallery.map((image, index) => <img key={index} src={image} alt={`Galeri ${website.business_name} ${index + 1}`} className="h-48 w-full rounded-2xl object-cover sm:h-64" />)}
             </div>
           </div>
         </section>
@@ -276,6 +307,15 @@ export default async function PublicWebsitePage({
                 </blockquote>
               ))}
             </div>
+          </div>
+        </section>
+      )}
+
+      {isPro && (content.about || content.description) && (
+        <section className={`${isPremium ? "px-6 py-28" : "px-6 py-20"}`}>
+          <div className={`mx-auto grid max-w-6xl gap-8 ${isPremium ? "rounded-3xl p-8 shadow-lg md:grid-cols-[.7fr_1.3fr] md:p-12" : "md:grid-cols-[.7fr_1.3fr]"}`} style={isPremium ? { backgroundColor: colors.card } : {}}>
+            <div><p className="text-sm font-bold uppercase tracking-widest" style={{ color: colors.accent }}>Cerita Kami</p><h2 className="mt-3 text-3xl font-bold">Tentang Kami</h2></div>
+            <p className="text-base leading-8 opacity-80">{content.about || content.description}</p>
           </div>
         </section>
       )}
@@ -367,11 +407,11 @@ export default async function PublicWebsitePage({
         )}
       </section>
 
-      <footer
-        className="px-6 py-6 text-center text-sm"
-        style={{ backgroundColor: colors.background }}
-      >
-        © {new Date().getFullYear()} {website.business_name}. All rights reserved.
+      <footer className="px-6 py-9 text-sm text-white" style={{ backgroundColor: colors.primary }}>
+        <div className="mx-auto flex max-w-6xl flex-col justify-between gap-4 sm:flex-row sm:items-center">
+          <div><p className="text-lg font-extrabold">{website.business_name}</p><p className="mt-1 text-white/70">© {new Date().getFullYear()} {website.business_name}. Hak cipta dilindungi.</p></div>
+          <p className="text-white/80">Website dibuat dengan <a href="/" className="font-bold text-white underline underline-offset-4">webUMKM</a><span className="mx-1">·</span><a href="https://wa.me/6281385916633?text=Halo%20R%20Studio%20Web%2C%20saya%20tertarik%20membuat%20website." target="_blank" rel="noopener noreferrer" className="font-bold text-white underline underline-offset-4">R Studio Web</a></p>
+        </div>
       </footer>
     </main>
   );

@@ -4,7 +4,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
-const packagePrices = { basic: 50000, pro: 75000, premium: 100000 };
+const packagePrices = { basic: 0, pro: 75000, premium: 100000 };
 const packageNames = { basic: "Basic", pro: "Pro", premium: "Premium" };
 
 type OrderResponse = {
@@ -78,7 +78,7 @@ export default function PaymentPage() {
   }, [orderId]);
 
   function confirmWhatsApp() {
-    if (!order || !senderName.trim() || !order.websiteId) {
+    if (!order || order.package === "basic" || !senderName.trim() || !order.websiteId) {
       alert("Data pesanan belum lengkap. Silakan muat ulang halaman.");
       return;
     }

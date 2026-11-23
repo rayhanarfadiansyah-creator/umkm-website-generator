@@ -8,62 +8,57 @@ const packages = [
   {
     id: "basic" as PackageName,
     name: "Basic",
-    price: "50.000",
-    description: "Profil bisnis sederhana untuk mulai tampil profesional.",
+    price: "Gratis",
+    description: "Website satu halaman yang simpel untuk memperkenalkan bisnis dan memudahkan pelanggan menghubungi kamu.",
     features: [
-      "Profil bisnis",
+      "Website profil bisnis sederhana",
       "Informasi produk atau layanan",
-      "Galeri foto",
-      "Kontak dan WhatsApp",
+      "Galeri foto dan kontak WhatsApp",
+      "Footer webUMKM",
     ],
   },
   {
     id: "pro" as PackageName,
     name: "Pro",
     price: "75.000",
-    description: "Website bisnis dengan informasi yang lebih lengkap.",
+    description: "Website bisnis yang lebih lengkap dengan katalog harga, keunggulan, testimoni, pilihan warna ekstra, dan tata letak yang lebih menarik.",
     features: [
       "Semua fitur Basic",
       "Daftar harga produk",
       "Testimoni pelanggan",
       "Keunggulan bisnis",
       "Animasi ringan",
+      "Form Tentang Kami terpisah",
+      "5 pilihan palet warna",
+      "Layout bisnis lebih modern",
     ],
   },
   {
     id: "premium" as PackageName,
     name: "Premium",
     price: "100.000",
-    description: "Website lengkap dengan informasi lokasi usaha.",
+    description: "Website premium dengan tampilan paling eksklusif, informasi lokasi, pilihan warna terlengkap, dan opsi foto background pada bagian hero.",
     features: [
       "Semua fitur Pro",
       "Google Maps",
       "Alamat bisnis",
       "Jam operasional",
       "Petunjuk arah lokasi",
+      "7 pilihan palet warna",
+      "Layout premium lebih eksklusif",
+      "Opsional background foto hero",
     ],
   },
 ];
 
 const palettes = [
-  {
-    id: "forest",
-    name: "Forest",
-    description: "Natural dan elegan",
-    colors: ["#263F35", "#D98566", "#F5F1E8"],
-  },
-  {
-    id: "terracotta",
-    name: "Terracotta",
-    description: "Hangat dan bersahabat",
-    colors: ["#794C3B", "#D58A68", "#F6EDE2"],
-  },
-  {
-    id: "ocean",
-    name: "Ocean",
-    description: "Segar dan modern",
-    colors: ["#294B5A", "#77A9A0", "#F0F5F1"],
-  },
+  { id: "forest", name: "Forest", description: "Natural dan elegan", colors: ["#263F35", "#D98566", "#F5F1E8"] },
+  { id: "terracotta", name: "Terracotta", description: "Hangat dan bersahabat", colors: ["#794C3B", "#D58A68", "#F6EDE2"] },
+  { id: "ocean", name: "Ocean", description: "Segar dan modern", colors: ["#294B5A", "#77A9A0", "#F0F5F1"] },
+  { id: "deep-teal", name: "Deep Teal", description: "Modern dan tegas", colors: ["#123F46", "#19A7A0", "#EAF5F2"] },
+  { id: "sunset", name: "Sunset", description: "Cerah dan hangat", colors: ["#743B54", "#F09A67", "#FFF2E8"] },
+  { id: "lavender", name: "Lavender", description: "Lembut dan kreatif", colors: ["#51456F", "#B7A5D8", "#F5F0FA"] },
+  { id: "midnight", name: "Midnight", description: "Premium dan berkelas", colors: ["#17243A", "#D5AE68", "#F2F0EA"] },
 ];
 
 function Field({
@@ -124,12 +119,43 @@ function TextField({
   );
 }
 
+async function compressImage(file: File, maxSide = 1200, maxBytes = 180_000): Promise<string> {
+  if (!file.type.startsWith("image/")) throw new Error("File harus berupa gambar.");
+  const source = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => { URL.revokeObjectURL(url); resolve(image); };
+    image.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Gambar tidak dapat dibaca.")); };
+    image.src = url;
+  });
+  const scale = Math.min(1, maxSide / Math.max(source.width, source.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(source.width * scale));
+  canvas.height = Math.max(1, Math.round(source.height * scale));
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("Browser tidak dapat memproses gambar.");
+  context.drawImage(source, 0, 0, canvas.width, canvas.height);
+  let quality = 0.76;
+  let result = canvas.toDataURL("image/jpeg", quality);
+  while (result.length > maxBytes * 1.38 && quality > 0.4) {
+    quality -= 0.08;
+    result = canvas.toDataURL("image/jpeg", quality);
+  }
+  if (result.length > maxBytes * 1.38) throw new Error("Foto terlalu besar. Pilih foto dengan ukuran lebih kecil.");
+  return result;
+}
+
 export default function CreateWebsitePage() {
   const [selectedPackage, setSelectedPackage] =
     useState<PackageName>("basic");
   const [selectedPalette, setSelectedPalette] = useState("forest");
   const [logoName, setLogoName] = useState("");
+  const [logoData, setLogoData] = useState("");
   const [photoNames, setPhotoNames] = useState<string[]>([]);
+  const [galleryData, setGalleryData] = useState<string[]>([]);
+  const [productImageData, setProductImageData] = useState<Record<number, string>>({});
+  const [heroBackgroundData, setHeroBackgroundData] = useState("");
+  const [heroBackgroundName, setHeroBackgroundName] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState("");
@@ -156,9 +182,14 @@ export default function CreateWebsitePage() {
 
   const isPremium = selectedPackage === "premium";
 
+  const availablePalettes = palettes.slice(
+    0,
+    selectedPackage === "basic" ? 3 : selectedPackage === "pro" ? 5 : 7
+  );
+
   const currentPalette = palettes.find(
     (item) => item.id === selectedPalette
-  )!;
+  ) || palettes[0];
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
   event.preventDefault();
@@ -177,6 +208,10 @@ export default function CreateWebsitePage() {
       category: formData.get("category"),
       tagline: formData.get("tagline"),
       description: formData.get("description"),
+      about: formData.get("about"),
+      heroBackground: heroBackgroundData,
+      logo: logoData,
+      gallery: galleryData,
       whatsapp: formData.get("whatsapp"),
       email: formData.get("email"),
       packageName: selectedPackage,
@@ -185,6 +220,7 @@ export default function CreateWebsitePage() {
         name: formData.get(`productName${index + 1}`),
         price: formData.get(`productPrice${index + 1}`),
         description: formData.get(`productDescription${index + 1}`),
+        image: productImageData[index + 1] || "",
       })),
       advantages: formData.get("advantages"),
       testimonials: formData.get("testimonials"),
@@ -308,6 +344,10 @@ window.location.assign(`/preview/${result.websiteId}`);
                       type="button"
                       onClick={() => {
                         setSelectedPackage(pkg.id);
+                        const nextPaletteCount = pkg.id === "basic" ? 3 : pkg.id === "pro" ? 5 : 7;
+                        if (!palettes.slice(0, nextPaletteCount).some((item) => item.id === selectedPalette)) {
+                          setSelectedPalette("forest");
+                        }
                         setSubmitted(false);
                       }}
                       className={`relative w-[85%] shrink-0 snap-start rounded-xl border-2 p-5 text-left transition sm:w-[48%] lg:w-auto lg:flex-1 ${
@@ -324,7 +364,7 @@ window.location.assign(`/preview/${result.websiteId}`);
 
                       <p className="text-lg font-bold">{pkg.name}</p>
                       <p className="mt-2 text-2xl font-bold">
-                        <span className="text-sm">Rp</span> {pkg.price}
+                        {pkg.id === "basic" ? "Gratis" : <><span className="text-sm">Rp</span> {pkg.price}</>}
                       </p>
                       <p className="mt-2 text-xs leading-5 text-[#68736A]">
                         {pkg.description}
@@ -357,11 +397,11 @@ window.location.assign(`/preview/${result.websiteId}`);
                 Pilih warna website
               </h2>
               <p className="mt-2 text-sm leading-6 text-[#68736A]">
-                Setiap paket memiliki tiga pilihan palet warna.
+Basic mendapat 3 warna, Pro 5 warna, dan Premium 7 warna. Pilihan warna tambahan terbuka sesuai paket.
               </p>
 
               <div className="mt-6 grid grid-cols-3 gap-3">
-                {palettes.map((palette) => {
+                {availablePalettes.map((palette) => {
                   const active = selectedPalette === palette.id;
 
                   return (
@@ -458,6 +498,18 @@ window.location.assign(`/preview/${result.websiteId}`);
                   />
                 </div>
 
+                {isPro && (
+                  <div className="sm:col-span-2 rounded-xl border border-[#D9DCCF] bg-[#F8F8F3] p-4">
+                    <TextField
+                      label="Tentang Kami"
+                      name="about"
+                      placeholder="Ceritakan sejarah bisnis, nilai yang dipegang, perjalanan usaha, dan hal yang membuat bisnis kamu berbeda..."
+                      rows={5}
+                    />
+                    <p className="mt-2 text-xs text-[#899087]">Bagian ini tampil terpisah dari deskripsi singkat di halaman utama.</p>
+                  </div>
+                )}
+
                 <Field
                   label="Nomor WhatsApp"
                   name="whatsapp"
@@ -520,6 +572,16 @@ window.location.assign(`/preview/${result.websiteId}`);
                       placeholder="Jelaskan produk atau layanan..."
                       className="mt-3 w-full rounded-lg border border-[#D9DCCF] bg-white px-3 py-3 text-sm outline-none focus:border-[#B96D50]"
                     />
+                    <div className="mt-3">
+                      <label className="mb-2 block text-xs font-semibold">Foto produk (opsional)</label>
+                      <input type="file" accept="image/png,image/jpeg,image/webp" className="block w-full text-sm" onChange={async (event) => {
+                        const file = event.target.files?.[0];
+                        if (!file) return;
+                        try { const image = await compressImage(file, 900, 80_000); setProductImageData((current) => ({ ...current, [number]: image })); }
+                        catch (error) { setSubmitMessage(error instanceof Error ? error.message : "Gagal memproses foto produk."); event.target.value = ""; }
+                      }} />
+                      {productImageData[number] && <img src={productImageData[number]} alt={`Preview foto produk ${number}`} className="mt-3 h-28 w-36 rounded-lg border border-[#D9DCCF] object-cover" />}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -554,15 +616,19 @@ window.location.assign(`/preview/${result.websiteId}`);
                       type="file"
                       accept="image/png,image/jpeg,image/webp"
                       className="hidden"
-                      onChange={(event) =>
-                        setLogoName(event.target.files?.[0]?.name || "")
-                      }
+                      onChange={async (event) => {
+                        const file = event.target.files?.[0];
+                        if (!file) return;
+                        try { setLogoData(await compressImage(file, 400, 40_000)); setLogoName(file.name); }
+                        catch (error) { setSubmitMessage(error instanceof Error ? error.message : "Gagal memproses logo."); event.target.value = ""; }
+                      }}
                     />
                   </label>
                   {logoName && (
-                    <p className="mt-2 text-xs text-[#58745B]">
-                      ✓ {logoName}
-                    </p>
+                    <div className="mt-3 flex items-center gap-3 text-xs text-[#58745B]">
+                      {logoData && <img src={logoData} alt="Preview logo bisnis" className="h-14 w-14 rounded-lg border border-[#D9DCCF] bg-white object-contain p-1" />}
+                      <span>✓ {logoName}</span>
+                    </div>
                   )}
                 </div>
 
@@ -583,21 +649,27 @@ window.location.assign(`/preview/${result.websiteId}`);
                       accept="image/png,image/jpeg,image/webp"
                       multiple
                       className="hidden"
-                      onChange={(event) =>
-                        setPhotoNames(
-                          Array.from(event.target.files || []).map(
-                            (file) => file.name
-                          )
-                        )
-                      }
+                      onChange={async (event) => {
+                        const files = Array.from(event.target.files || []).slice(0, 5);
+                        try {
+                          const images = await Promise.all(files.map((file) => compressImage(file, 1000, 80_000)));
+                          setGalleryData(images);
+                          setPhotoNames(files.map((file) => file.name));
+                        } catch (error) {
+                          setSubmitMessage(error instanceof Error ? error.message : "Gagal memproses galeri foto.");
+                          event.target.value = "";
+                        }
+                      }}
                     />
                   </label>
 
+                  <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                    {galleryData.map((image, index) => <img key={`${photoNames[index] || index}`} src={image} alt={`Foto galeri ${index + 1}`} className="h-28 w-full rounded-lg border border-[#D9DCCF] object-cover" />)}
+                  </div>
                   {photoNames.map((name) => (
-                    <p key={name} className="mt-2 text-xs text-[#58745B]">
-                      ✓ {name}
-                    </p>
+                    <p key={name} className="mt-2 text-xs text-[#58745B]">✓ {name}</p>
                   ))}
+                  <p className="mt-2 text-xs text-[#899087]">Maksimal 5 foto galeri. Foto akan dikompres otomatis agar lebih ringan.</p>
                 </div>
               </div>
             </section>
@@ -648,6 +720,57 @@ window.location.assign(`/preview/${result.websiteId}`);
                     </p>
                   </div>
                 </div>
+              </section>
+            )}
+
+            {/* BACKGROUND HERO PREMIUM (OPSIONAL) */}
+            {isPremium && (
+              <section className="rounded-2xl border border-[#D9DCCF] bg-white p-5 sm:p-7 animate-fade-up">
+                <span className="rounded-full bg-[#E9E9DE] px-3 py-1 text-xs font-bold text-[#58665D]">Bonus Premium</span>
+                <h2 className="mt-4 text-2xl font-bold">Background foto halaman utama</h2>
+                <p className="mt-2 text-sm leading-6 text-[#68736A]">Opsional. Foto ini akan menjadi latar bagian paling atas website. Gunakan foto landscape yang jelas.</p>
+                <label className="mt-5 flex cursor-pointer flex-col items-center rounded-xl border-2 border-dashed border-[#C9D1BE] bg-[#F8F8F3] px-4 py-7 text-center transition hover:bg-[#F1F2E9]">
+                  <span className="text-3xl">▧</span>
+                  <span className="mt-2 text-sm font-bold">Upload background hero (opsional)</span>
+                  <span className="mt-1 text-xs text-[#899087]">JPG, PNG, atau WebP. Maksimal 5 MB sebelum kompresi.</span>
+                  <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={async (event) => {
+                    const file = event.target.files?.[0];
+                    if (!file) { setHeroBackgroundData(""); setHeroBackgroundName(""); return; }
+                    if (file.size > 5 * 1024 * 1024) { setSubmitMessage("Ukuran foto background maksimal 5 MB."); event.target.value = ""; return; }
+                    try {
+                      const dataUrl = await new Promise<string>((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = () => resolve(String(reader.result || ""));
+                        reader.onerror = () => reject(new Error("Foto gagal dibaca."));
+                        reader.readAsDataURL(file);
+                      });
+                      const compressed = await new Promise<string>((resolve, reject) => {
+                        const img = new Image();
+                        img.onload = () => {
+                          const scale = Math.min(1, 1600 / img.width, 1200 / img.height);
+                          const canvas = document.createElement("canvas");
+                          canvas.width = Math.max(1, Math.round(img.width * scale));
+                          canvas.height = Math.max(1, Math.round(img.height * scale));
+                          const ctx = canvas.getContext("2d");
+                          if (!ctx) { reject(new Error("Gagal memproses foto.")); return; }
+                          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                          resolve(canvas.toDataURL("image/jpeg", 0.72));
+                        };
+                        img.onerror = () => reject(new Error("Format foto tidak didukung."));
+                        img.src = dataUrl;
+                      });
+                      if (compressed.length > 620_000) throw new Error("Foto background masih terlalu besar setelah dikompres. Coba foto lain.");
+                      setHeroBackgroundData(compressed);
+                      setHeroBackgroundName(file.name);
+                      setSubmitMessage("");
+                    } catch (error) {
+                      setSubmitMessage(error instanceof Error ? error.message : "Foto gagal diproses.");
+                      event.target.value = "";
+                    }
+                  }} />
+                </label>
+                {heroBackgroundName && <p className="mt-2 text-xs text-[#58745B]">✓ {heroBackgroundName} siap digunakan</p>}
+                {heroBackgroundData && <img src={heroBackgroundData} alt="Preview background hero" className="mt-4 h-36 w-full rounded-xl object-cover" />}
               </section>
             )}
 
@@ -749,10 +872,10 @@ window.location.assign(`/preview/${result.websiteId}`);
 
               <div className="mt-6 border-y border-[#E5E6DE] py-5">
                 <p className="text-xs text-[#899087]">
-                  Pembayaran satu kali
+                  {selectedPackage === "basic" ? "Tanpa biaya berlangganan" : "Pembayaran satu kali"}
                 </p>
                 <p className="mt-1 text-3xl font-bold">
-                  <span className="text-sm">Rp</span> {currentPackage.price}
+                  {selectedPackage === "basic" ? "Gratis" : <><span className="text-sm">Rp</span> {currentPackage.price}</>}
                 </p>
               </div>
 

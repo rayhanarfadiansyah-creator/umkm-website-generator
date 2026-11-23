@@ -98,7 +98,7 @@ export default function PesananPage() {
   });
 
   return (
-    <main className="min-h-screen bg-[#F5F1E8] md:flex">
+    <main className="min-h-screen min-w-0 overflow-x-hidden bg-[#F5F1E8] md:flex">
       <AdminSidebar
         adminEmail="arfarayhan21@gmail.com"
         activePage="pesanan"
@@ -108,7 +108,7 @@ export default function PesananPage() {
         }}
         loggingOut={false}
       />
-      <section className="min-w-0 flex-1 px-5 py-8 md:px-10">
+      <section className="min-w-0 flex-1 px-4 py-6 sm:px-5 sm:py-8 md:px-10">
         <div className="mx-auto max-w-7xl">
           <div className="mb-8">
             <p className="mb-2 text-sm font-bold uppercase tracking-wider text-[#D16B4D]">Administrator</p>
@@ -155,8 +155,8 @@ export default function PesananPage() {
             {loading ? <div className="p-10 text-center text-sm text-slate-500">Memuat data pesanan...</div>
               : error ? <div className="p-10 text-center text-sm text-red-600">{error}</div>
               : filteredOrders.length === 0 ? <div className="p-10 text-center text-sm text-slate-500">Belum ada pesanan yang cocok.</div>
-              : <div className="overflow-x-auto">
-                  <table className="w-full min-w-[1050px] text-left text-sm">
+              : <div className="max-w-full overflow-x-auto overscroll-x-contain">
+                  <table className="w-full min-w-[900px] text-left text-sm">
                     <thead className="bg-[#F8F7F3] text-xs uppercase text-slate-500">
                       <tr>
                         <th className="px-5 py-4">Pelanggan / Usaha</th>

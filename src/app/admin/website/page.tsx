@@ -67,9 +67,9 @@ export default function WebsitePage() {
   }, [websites, search, filter]);
 
   return (
-    <main className="min-h-screen bg-[#F5F1E8] md:flex">
+    <main className="min-h-screen min-w-0 overflow-x-hidden bg-[#F5F1E8] md:flex">
       <AdminSidebar adminEmail={adminEmail} activePage="website" onLogout={logout} loggingOut={false} />
-      <section className="min-w-0 flex-1 px-5 py-8 md:px-10">
+      <section className="min-w-0 flex-1 px-4 py-6 sm:px-5 sm:py-8 md:px-10">
         <div className="mx-auto max-w-7xl">
           <p className="text-sm font-bold uppercase tracking-wider text-[#D16B4D]">Administrator</p>
           <h1 className="mt-2 text-3xl font-black text-[#263F35] md:text-4xl">Website</h1>
@@ -96,7 +96,7 @@ export default function WebsitePage() {
             {loading ? <p className="p-10 text-center text-sm text-slate-500">Memuat website...</p>
               : error ? <p className="p-10 text-center text-sm text-red-600">{error}</p>
               : filtered.length === 0 ? <p className="p-10 text-center text-sm text-slate-500">Belum ada website yang cocok.</p>
-              : <div className="overflow-x-auto">
+              : <div className="max-w-full overflow-x-auto overscroll-x-contain">
                   <table className="w-full min-w-[900px] text-left text-sm">
                     <thead className="bg-[#F8F7F3] text-xs uppercase text-slate-500">
                       <tr><th className="px-5 py-4">Website / Usaha</th><th className="px-5 py-4">Pelanggan</th><th className="px-5 py-4">Paket</th><th className="px-5 py-4">Status Website</th><th className="px-5 py-4">Pembayaran</th><th className="px-5 py-4">Dibuat</th></tr>
@@ -114,7 +114,7 @@ export default function WebsitePage() {
                   </table>
                 </div>}
           </div>
-          <p className="mt-4 text-xs text-slate-400">Halaman pemantauan saja. Verifikasi pembayaran dan perubahan status publikasi belum diaktifkan.</p>
+          <p className="mt-4 text-xs text-slate-400">Pembayaran paket berbayar dikonfirmasi melalui menu Pesanan. Setelah admin mengonfirmasi, website otomatis berstatus Terbit.</p>
         </div>
       </section>
     </main>

@@ -63,9 +63,9 @@ export default function PelangganPage() {
   }, [customers, search]);
 
   return (
-    <main className="min-h-screen bg-[#F5F1E8] md:flex">
+    <main className="min-h-screen min-w-0 overflow-x-hidden bg-[#F5F1E8] md:flex">
       <AdminSidebar adminEmail={adminEmail} activePage="pelanggan" onLogout={logout} loggingOut={false} />
-      <section className="min-w-0 flex-1 px-5 py-8 md:px-10">
+      <section className="min-w-0 flex-1 px-4 py-6 sm:px-5 sm:py-8 md:px-10">
         <div className="mx-auto max-w-7xl">
           <p className="text-sm font-bold uppercase tracking-wider text-[#D16B4D]">Administrator</p>
           <h1 className="mt-2 text-3xl font-black text-[#263F35] md:text-4xl">Pelanggan</h1>
@@ -91,7 +91,7 @@ export default function PelangganPage() {
             {loading ? <p className="p-10 text-center text-sm text-slate-500">Memuat pelanggan...</p>
               : error ? <p className="p-10 text-center text-sm text-red-600">{error}</p>
               : filtered.length === 0 ? <p className="p-10 text-center text-sm text-slate-500">Belum ada pelanggan yang cocok.</p>
-              : <div className="overflow-x-auto">
+              : <div className="max-w-full overflow-x-auto overscroll-x-contain">
                   <table className="w-full min-w-[760px] text-left text-sm">
                     <thead className="bg-[#F8F7F3] text-xs uppercase text-slate-500">
                       <tr><th className="px-5 py-4">Pelanggan</th><th className="px-5 py-4">WhatsApp</th><th className="px-5 py-4">Total Pesanan</th><th className="px-5 py-4">Website</th><th className="px-5 py-4">Terdaftar</th></tr>

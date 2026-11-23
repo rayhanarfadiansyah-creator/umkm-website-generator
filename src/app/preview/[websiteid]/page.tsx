@@ -26,6 +26,7 @@ type Product = {
   name?: string;
   price?: number | string | null;
   description?: string;
+  image?: string;
 };
 
 const palettes: Record<
@@ -37,24 +38,13 @@ const palettes: Record<
     text: string;
   }
 > = {
-  forest: {
-    background: "#F5F1E8",
-    primary: "#263F35",
-    accent: "#D98566",
-    text: "#263F35",
-  },
-  terracotta: {
-    background: "#F6EDE2",
-    primary: "#794C3B",
-    accent: "#D58A68",
-    text: "#794C3B",
-  },
-  ocean: {
-    background: "#F0F5F1",
-    primary: "#294B5A",
-    accent: "#77A9A0",
-    text: "#294B5A",
-  },
+  forest: { background: "#F5F1E8", primary: "#263F35", accent: "#D98566", text: "#263F35" },
+  terracotta: { background: "#F6EDE2", primary: "#794C3B", accent: "#D58A68", text: "#794C3B" },
+  ocean: { background: "#F0F5F1", primary: "#294B5A", accent: "#77A9A0", text: "#294B5A" },
+  "deep-teal": { background: "#EAF5F2", primary: "#123F46", accent: "#19A7A0", text: "#123F46" },
+  sunset: { background: "#FFF2E8", primary: "#743B54", accent: "#F09A67", text: "#743B54" },
+  lavender: { background: "#F5F0FA", primary: "#51456F", accent: "#B7A5D8", text: "#51456F" },
+  midnight: { background: "#F2F0EA", primary: "#17243A", accent: "#D5AE68", text: "#17243A" },
 };
 
 export default function PreviewPage() {
@@ -158,6 +148,15 @@ export default function PreviewPage() {
     typeof content.tagline === "string"
       ? content.tagline
       : "Selamat datang di website kami.";
+
+  const about = typeof content.about === "string" && content.about.trim()
+    ? content.about
+    : description;
+  const logo = typeof content.logo === "string" && content.logo.startsWith("data:image/") ? content.logo : "";
+  const gallery = Array.isArray(content.gallery) ? content.gallery.filter((item): item is string => typeof item === "string" && item.startsWith("data:image/")) : [];
+  const heroBackground = typeof content.heroBackground === "string" && content.heroBackground.startsWith("data:image/")
+    ? content.heroBackground
+    : "";
 
   const products: Product[] = Array.isArray(content.products)
     ? (content.products as Product[])
@@ -303,9 +302,10 @@ export default function PreviewPage() {
               color: "white",
             }}
           >
-            <span className="text-xl font-extrabold">
-              {website.businessName}
-            </span>
+            <div className="flex min-w-0 items-center gap-3">
+              {logo ? <img src={logo} alt={`Logo ${website.businessName}`} className="h-11 w-11 rounded-lg bg-white object-contain p-1" /> : null}
+              <span className="text-xl font-extrabold">{website.businessName}</span>
+            </div>
 
             <span className="text-xs uppercase tracking-wider">
               {website.package} website
@@ -313,18 +313,18 @@ export default function PreviewPage() {
           </div>
 
           {/* Hero */}
-          <section className="px-6 py-20 text-center sm:py-28">
-            <p className="text-sm font-semibold opacity-70">
-              Selamat datang
-            </p>
-
-            <h2 className="mx-auto mt-4 max-w-3xl text-4xl font-extrabold sm:text-6xl">
+          <section
+            className={`relative overflow-hidden px-6 py-20 sm:px-12 sm:py-28 ${website.package === "basic" ? "text-left" : website.package === "pro" ? "text-left sm:py-24" : "text-center sm:py-32"}`}
+            style={heroBackground && isPremium ? { backgroundImage: `linear-gradient(90deg, rgba(12,25,28,.78), rgba(12,25,28,.38)), url(${heroBackground})`, backgroundSize: "cover", backgroundPosition: "center", color: "white" } : {}}
+          >
+            {website.package === "premium" && <p className="text-xs font-bold uppercase tracking-[0.22em] opacity-75">Selamat datang di</p>}
+            <h2 className={`mt-4 max-w-3xl text-4xl font-extrabold sm:text-6xl ${website.package === "premium" ? "mx-auto" : ""}`}>
               {tagline}
             </h2>
-
-            <p className="mx-auto mt-6 max-w-2xl leading-7 opacity-80">
+            <p className={`mt-6 max-w-2xl leading-7 opacity-80 ${website.package === "premium" ? "mx-auto" : ""}`}>
               {description}
             </p>
+            {website.package !== "basic" && whatsappUrl && <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="mt-8 inline-flex rounded-full px-7 py-3 font-bold" style={{ backgroundColor: palette.accent, color: "white" }}>Hubungi Kami</a>}
           </section>
 
           {/* Produk dan layanan */}
@@ -342,6 +342,7 @@ export default function PreviewPage() {
                       key={index}
                       className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm"
                     >
+                      {product.image && <img src={product.image} alt={product.name || "Foto produk"} className="mb-4 h-48 w-full rounded-xl object-cover" />}
                       <h3 className="text-xl font-bold text-[#263F35]">
                         {product.name}
                       </h3>
@@ -362,6 +363,15 @@ export default function PreviewPage() {
                       )}
                     </div>
                   ))}
+              </div>
+            </section>
+          )}
+
+          {gallery.length > 0 && (
+            <section className="bg-white px-6 py-14 sm:px-12">
+              <h2 className="text-3xl font-extrabold">Galeri Foto</h2>
+              <div className="mt-7 grid grid-cols-2 gap-4 sm:grid-cols-3">
+                {gallery.map((image, index) => <img key={index} src={image} alt={`Galeri bisnis ${index + 1}`} className="h-44 w-full rounded-xl object-cover sm:h-56" />)}
               </div>
             </section>
           )}
@@ -413,15 +423,17 @@ export default function PreviewPage() {
           )}
 
           {/* Tentang Kami */}
+          {isProOrPremium && about.trim() && (
           <section className="px-6 py-14 sm:px-12">
             <h2 className="text-3xl font-extrabold">
               Tentang Kami
             </h2>
 
             <p className="mt-5 max-w-3xl leading-8 opacity-80">
-              {description}
+              {about}
             </p>
           </section>
+          )}
 
           {/* Lokasi Premium */}
           {isPremium && (
@@ -513,7 +525,8 @@ export default function PreviewPage() {
               color: "#263F35",
             }}
           >
-            {website.businessName}
+            <div className="font-bold">{website.businessName}</div>
+            <div className="mt-2 text-xs opacity-80">Website dibuat dengan webUMKM · R Studio Web</div>
           </footer>
         </div>
 

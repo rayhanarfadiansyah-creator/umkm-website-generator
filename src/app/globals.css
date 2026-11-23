@@ -110,3 +110,22 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+
+/* Swipe horizontal untuk deretan kartu pada layar mobile */
+.mobile-swipe {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  scroll-snap-type: x proximity;
+}
+
+.mobile-swipe::-webkit-scrollbar {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .mobile-swipe > * {
+    scroll-snap-align: start;
+  }
+}

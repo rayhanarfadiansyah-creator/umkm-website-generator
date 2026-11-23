@@ -31,12 +31,12 @@ export async function POST(request: Request) {
       typeof body.palette === "string" ? body.palette.trim() : "";
 
     const prices = {
-      basic: 50000,
+      basic: 0,
       pro: 75000,
       premium: 100000,
     } as const;
 
-    if (!businessName || !email || !whatsapp || !palette) {
+    if (!businessName || !whatsapp || !palette) {
       return NextResponse.json(
         { success: false, message: "Data bisnis belum lengkap." },
         { status: 400 }
@@ -53,16 +53,20 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return NextResponse.json(
         { success: false, message: "Format email tidak valid." },
         { status: 400 }
       );
     }
 
-    const allowedPalettes = ["forest", "terracotta", "ocean"];
+    const paletteTiers: Record<string, string[]> = {
+      basic: ["forest", "terracotta", "ocean"],
+      pro: ["forest", "terracotta", "ocean", "deep-teal", "sunset"],
+      premium: ["forest", "terracotta", "ocean", "deep-teal", "sunset", "lavender", "midnight"],
+    };
 
-    if (!allowedPalettes.includes(palette)) {
+    if (!paletteTiers[String(packageName)]?.includes(palette)) {
       return NextResponse.json(
         { success: false, message: "Pilihan warna tidak valid." },
         { status: 400 }
@@ -88,6 +92,7 @@ export async function POST(request: Request) {
     ).toISOString();
 
     const amount = prices[packageName as keyof typeof prices];
+    const isFreePackage = packageName === "basic";
 
     const statements = [
       db.prepare(`
@@ -108,25 +113,28 @@ export async function POST(request: Request) {
         INSERT INTO orders (
           id, customer_id, package, amount, status, created_at, updated_at
         )
-        VALUES (?, ?, ?, ?, 'pending_payment', ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
       `).bind(
         orderId,
         customerId,
         packageName,
         amount,
+        isFreePackage ? "paid" : "pending_payment",
         createdAt,
         createdAt
       ),
 
       db.prepare(`
         INSERT INTO payments (
-          id, order_id, provider, amount, status, created_at, updated_at
+          id, order_id, provider, amount, status, paid_at, created_at, updated_at
         )
-        VALUES (?, ?, 'manual', ?, 'pending', ?, ?)
+        VALUES (?, ?, 'manual', ?, ?, ?, ?, ?)
       `).bind(
         paymentId,
         orderId,
         amount,
+        isFreePackage ? "paid" : "pending",
+        isFreePackage ? createdAt : null,
         createdAt,
         createdAt
       ),
@@ -134,9 +142,9 @@ export async function POST(request: Request) {
       db.prepare(`
         INSERT INTO websites (
           id, customer_id, order_id, business_name, slug,
-          package, palette, status, content_json, created_at, updated_at
+          package, palette, status, content_json, published_at, created_at, updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).bind(
         websiteId,
         customerId,
@@ -151,7 +159,9 @@ export async function POST(request: Request) {
   .slice(0, 40)}-${websiteId.slice(0, 8)}`,
         packageName,
         palette,
+        isFreePackage ? "published" : "draft",
         JSON.stringify(body),
+        isFreePackage ? createdAt : null,
         createdAt,
         createdAt
       ),
@@ -176,7 +186,7 @@ export async function POST(request: Request) {
     const response = NextResponse.json(
       {
         success: true,
-        message: "Pesanan berhasil disimpan dan menunggu pembayaran.",
+        message: isFreePackage ? "Website Basic berhasil dibuat dan langsung diterbitkan." : "Pesanan berhasil disimpan dan menunggu pembayaran.",
         orderId,
         websiteId,
       },

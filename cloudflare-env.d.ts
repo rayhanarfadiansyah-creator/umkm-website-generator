@@ -10,7 +10,25 @@ interface __BaseEnv_CloudflareEnv {
 declare namespace Cloudflare {
 	interface Env extends __BaseEnv_CloudflareEnv {}
 }
-interface CloudflareEnv extends __BaseEnv_CloudflareEnv {}
+interface D1StatementResult<T = unknown> {
+  success: boolean;
+  results?: T[];
+  meta?: { changes?: number; [key: string]: unknown };
+}
+interface D1PreparedStatement {
+  bind(...values: unknown[]): D1PreparedStatement;
+  first<T = unknown>(columnName?: string): Promise<T | null>;
+  all<T = unknown>(): Promise<D1StatementResult<T>>;
+  run<T = unknown>(): Promise<D1StatementResult<T>>;
+}
+interface D1Database {
+  prepare(query: string): D1PreparedStatement;
+  batch<T = unknown>(statements: D1PreparedStatement[]): Promise<D1StatementResult<T>[]>;
+}
+interface CloudflareEnv extends __BaseEnv_CloudflareEnv {
+  umkm_website_generator_db: D1Database;
+  ADMIN_BOOTSTRAP_SECRET: string;
+}
 type StringifyValues<EnvType extends Record<string, unknown>> = {
 	[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 };
