@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 const packagePrices = { basic: 0, pro: 75000, premium: 100000 };
@@ -18,7 +18,7 @@ type OrderResponse = {
   };
 };
 
-export default function PaymentPage() {
+function PaymentContent() {
   const searchParams = useSearchParams();
   const orderId = searchParams.get("orderId");
 
@@ -78,7 +78,12 @@ export default function PaymentPage() {
   }, [orderId]);
 
   function confirmWhatsApp() {
-    if (!order || order.package === "basic" || !senderName.trim() || !order.websiteId) {
+    if (
+      !order ||
+      order.package === "basic" ||
+      !senderName.trim() ||
+      !order.websiteId
+    ) {
       alert("Data pesanan belum lengkap. Silakan muat ulang halaman.");
       return;
     }
@@ -107,7 +112,7 @@ export default function PaymentPage() {
     window.open(whatsappUrl, "_blank", "noopener,noreferrer");
 
     // Tab webUMKM otomatis berpindah ke halaman preview.
-        window.location.href = `/preview-pembayaran/${encodeURIComponent(
+    window.location.href = `/preview-pembayaran/${encodeURIComponent(
       order.websiteId
     )}`;
   }
@@ -274,5 +279,19 @@ export default function PaymentPage() {
         </p>
       </div>
     </main>
+  );
+}
+
+export default function PaymentPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="p-10 text-center">
+          Memuat halaman pembayaran...
+        </main>
+      }
+    >
+      <PaymentContent />
+    </Suspense>
   );
 }

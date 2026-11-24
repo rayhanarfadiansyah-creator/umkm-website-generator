@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const packages = [
   {
@@ -206,6 +206,29 @@ function WebsiteMockup() {
 }
 
 export default function Home() {
+    const [showAdminLink, setShowAdminLink] = useState(false);
+  const logoClickCount = useRef(0);
+  const logoClickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function handleSecretLogoClick(event: React.MouseEvent<HTMLAnchorElement>) {
+    event.preventDefault();
+
+    logoClickCount.current += 1;
+
+    if (logoClickTimer.current) {
+      clearTimeout(logoClickTimer.current);
+    }
+
+    if (logoClickCount.current >= 5) {
+      setShowAdminLink(true);
+      logoClickCount.current = 0;
+      return;
+    }
+
+    logoClickTimer.current = setTimeout(() => {
+      logoClickCount.current = 0;
+    }, 3000);
+  }
   useEffect(() => {
     const revealItems = document.querySelectorAll<HTMLElement>("[data-reveal]");
 
@@ -235,7 +258,11 @@ export default function Home() {
       {/* NAVBAR */}
       <header className="sticky top-0 z-50 border-b border-[#123B3A]/10 bg-[#F7F5EC]/90 backdrop-blur-xl">
         <nav className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 sm:px-8 lg:px-10">
-          <a href="#" className="text-2xl font-black tracking-tight">
+          <a
+            href="#"
+            onClick={handleSecretLogoClick}
+            className="text-2xl font-black tracking-tight"
+            >
             web<span className="text-[#FF6B5E]">UMKM</span>
           </a>
 
@@ -642,6 +669,14 @@ export default function Home() {
               <a href="#harga" className="hover:text-[#FF6B5E]">Harga</a>
               <a href="#faq" className="hover:text-[#FF6B5E]">FAQ</a>
             </div>
+            {showAdminLink && (
+              <a
+                href="/admin/login"
+                className="text-xs text-[#607A77]/70 transition hover:text-[#FF6B5E]"
+              >
+                Admin
+              </a>
+            )}
             <p>
               Website by{" "}
               <a

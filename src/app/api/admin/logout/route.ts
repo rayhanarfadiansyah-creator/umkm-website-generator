@@ -1,8 +1,9 @@
 
 import { NextResponse } from "next/server";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { headers } from "next/headers";
 
-export const runtime = "edge";
+export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   try {
@@ -33,10 +34,15 @@ export async function POST(request: Request) {
         .run();
     }
 
-    const response = NextResponse.json({
-      success: true,
-      message: "Logout berhasil.",
-    });
+    const response = NextResponse.json(
+  {
+    success: true,
+    message: "Logout berhasil.",
+  },
+  {
+    headers: { "Cache-Control": "no-store" },
+  }
+);
 
     response.cookies.delete("webumkm_admin_session");
 

@@ -159,6 +159,74 @@ export default function CreateWebsitePage() {
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState("");
+  const [freeQuota, setFreeQuota] = useState<{
+  used: number;
+  remaining: number;
+  quota: number;
+} | null>(null);
+
+const [quotaLoading, setQuotaLoading] = useState(true);
+const [quotaError, setQuotaError] = useState("");
+
+  useEffect(() => {
+  let cancelled = false;
+
+  async function loadFreeQuota() {
+    try {
+      const response = await fetch("/api/visitor", {
+        method: "GET",
+        cache: "no-store",
+        credentials: "same-origin",
+      });
+
+      const result: {
+  success: boolean;
+  used: number;
+  remaining: number;
+  quota: number;
+  message?: string;
+} = await response.json();
+      if (
+        !response.ok ||
+        !result.success ||
+        typeof result.used !== "number" ||
+        typeof result.remaining !== "number" ||
+        typeof result.quota !== "number"
+      ) {
+        throw new Error(
+          result.message || "Kuota gratis belum bisa diperiksa."
+        );
+      }
+
+      if (!cancelled) {
+        setFreeQuota({
+          used: result.used,
+          remaining: result.remaining,
+          quota: result.quota,
+        });
+        setQuotaError("");
+      }
+    } catch (error) {
+      if (!cancelled) {
+        setQuotaError(
+          error instanceof Error
+            ? error.message
+            : "Kuota gratis belum bisa diperiksa."
+        );
+      }
+    } finally {
+      if (!cancelled) {
+        setQuotaLoading(false);
+      }
+    }
+  }
+
+  loadFreeQuota();
+
+  return () => {
+    cancelled = true;
+  };
+}, []);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -831,16 +899,56 @@ Basic mendapat 3 warna, Pro 5 warna, dan Premium 7 warna. Pilihan warna tambahan
                 melanjutkan ke proses berikutnya.
               </p>
 
-              <button
+              {selectedPackage === "basic" && (
+  <div className="mt-5 rounded-xl border border-white/15 bg-white/10 p-4">
+    <p className="text-sm font-bold">Kuota website gratis</p>
+
+    {quotaLoading ? (
+      <p className="mt-1 text-xs text-white/75">
+        Sedang memeriksa kuota...
+      </p>
+    ) : freeQuota ? (
+      <>
+        <p className="mt-1 text-sm text-white/90">
+          {freeQuota.used} dari {freeQuota.quota} website telah digunakan.
+        </p>
+
+        <p className="mt-1 text-xs text-white/75">
+          Sisa kuota: {freeQuota.remaining} website gratis.
+        </p>
+
+        {freeQuota.remaining === 0 && (
+          <p className="mt-2 text-xs font-semibold text-[#FFD5C4]">
+            Kuota gratis perangkat ini sudah habis.
+            Kamu masih bisa memilih paket Pro atau Premium.
+          </p>
+        )}
+      </>
+    ) : (
+      <p className="mt-1 text-xs text-[#FFD5C4]">
+        {quotaError || "Kuota belum dapat diperiksa. Coba muat ulang halaman."}
+      </p>
+    )}
+  </div>
+)}
+
+<button
   type="submit"
-  disabled={isSubmitting}
+  disabled={
+    isSubmitting ||
+    (selectedPackage === "basic" &&
+      (quotaLoading || !freeQuota || freeQuota.remaining <= 0))
+  }
   className="mt-6 w-full rounded-full bg-[#D98566] px-6 py-4 font-bold text-white transition hover:bg-[#C87355] disabled:cursor-not-allowed disabled:opacity-60"
 >
   {isSubmitting
     ? "Menyimpan Pesanan..."
-    : "Simpan Pesanan →"}
+    : selectedPackage === "basic" &&
+      !quotaLoading &&
+      freeQuota?.remaining === 0
+      ? "Kuota Gratis Habis"
+      : "Simpan Pesanan →"}
 </button>
-
               {submitMessage && (
   <p
     className={`mt-4 rounded-xl p-4 text-sm leading-6 ${

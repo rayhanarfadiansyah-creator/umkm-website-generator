@@ -1,47 +1,36 @@
 
 import { NextResponse } from "next/server";
-import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { requireAdmin } from "@/lib/require-admin";
+import { getDb } from "@/lib/db";
 
-export const runtime = "edge";
+export const runtime = "nodejs";
+
+function json(
+  body: { success: boolean; message: string },
+  status = 200
+) {
+  return NextResponse.json(body, {
+    status,
+    headers: {
+      "Cache-Control": "no-store",
+    },
+  });
+}
 
 export async function POST(
-  request: Request,
+  _request: Request,
   { params }: { params: Promise<{ orderid: string }> }
 ) {
   try {
-    const sessionToken = request.headers
-      .get("cookie")
-      ?.split(";")
-      .map((cookie) => cookie.trim())
-      .find((cookie) => cookie.startsWith("webumkm_admin_session="))
-      ?.slice("webumkm_admin_session=".length);
+    // Validasi session menggunakan helper terpusat.
+    const admin = await requireAdmin();
 
-    if (!sessionToken) {
-      return NextResponse.json(
-        { success: false, message: "Akses ditolak." },
-        { status: 401 }
+    if (!admin) {
+      return json(
+        { success: false, message: "Session admin tidak valid atau kedaluwarsa." },
+        401
       );
     }
-
-    let decodedToken: string;
-
-    try {
-      decodedToken = decodeURIComponent(sessionToken);
-    } catch {
-      return NextResponse.json(
-        { success: false, message: "Session admin tidak valid." },
-        { status: 401 }
-      );
-    }
-
-    const digest = await crypto.subtle.digest(
-      "SHA-256",
-      new TextEncoder().encode(decodedToken)
-    );
-
-    const tokenHash = Array.from(new Uint8Array(digest))
-      .map((byte) => byte.toString(16).padStart(2, "0"))
-      .join("");
 
     const { orderid } = await params;
 
@@ -50,33 +39,13 @@ export async function POST(
         orderid
       )
     ) {
-      return NextResponse.json(
+      return json(
         { success: false, message: "ID pesanan tidak valid." },
-        { status: 400 }
+        400
       );
     }
 
-    const { env } = getCloudflareContext();
-    const db = env.umkm_website_generator_db;
-
-    const admin = await db
-      .prepare(
-        `SELECT id FROM admin_sessions
-         WHERE token_hash = ? AND expires_at > ?
-         LIMIT 1`
-      )
-      .bind(tokenHash, new Date().toISOString())
-      .first<{ id: string }>();
-
-    if (!admin) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Session admin tidak valid atau kedaluwarsa.",
-        },
-        { status: 401 }
-      );
-    }
+    const db = getDb();
 
     const order = await db
       .prepare(
@@ -91,6 +60,13 @@ export async function POST(
          LEFT JOIN payments p ON p.order_id = o.id
          LEFT JOIN websites w ON w.order_id = o.id
          WHERE o.id = ?
+         ORDER BY
+           CASE p.status
+             WHEN 'pending' THEN 0
+             WHEN 'paid' THEN 1
+             ELSE 2
+           END,
+           p.created_at DESC
          LIMIT 1`
       )
       .bind(orderid)
@@ -104,23 +80,9 @@ export async function POST(
       }>();
 
     if (!order) {
-      return NextResponse.json(
+      return json(
         { success: false, message: "Pesanan tidak ditemukan." },
-        { status: 404 }
-      );
-    }
-
-    if (!order.payment_id || !order.payment_status) {
-      return NextResponse.json(
-        { success: false, message: "Data pembayaran tidak ditemukan." },
-        { status: 404 }
-      );
-    }
-
-    if (!order.website_id || !order.website_status) {
-      return NextResponse.json(
-        { success: false, message: "Data website pesanan tidak ditemukan." },
-        { status: 404 }
+        404
       );
     }
 
@@ -128,12 +90,19 @@ export async function POST(
       order.order_status === "cancelled" ||
       order.order_status === "refunded"
     ) {
-      return NextResponse.json(
+      return json(
         {
           success: false,
           message: "Pesanan dibatalkan atau dikembalikan dan tidak bisa diterbitkan.",
         },
-        { status: 409 }
+        409
+      );
+    }
+
+    if (!order.payment_id || !order.payment_status) {
+      return json(
+        { success: false, message: "Data pembayaran tidak ditemukan." },
+        404
       );
     }
 
@@ -141,45 +110,69 @@ export async function POST(
       order.payment_status !== "pending" &&
       order.payment_status !== "paid"
     ) {
-      return NextResponse.json(
+      return json(
         {
           success: false,
           message: `Pembayaran tidak bisa dikonfirmasi karena statusnya ${order.payment_status}.`,
         },
-        { status: 409 }
+        409
+      );
+    }
+
+    if (!order.website_id || !order.website_status) {
+      return json(
+        { success: false, message: "Data website pesanan tidak ditemukan." },
+        404
       );
     }
 
     if (order.website_status === "published") {
-      return NextResponse.json({
-        success: true,
-        message: "Pembayaran sudah dikonfirmasi dan website sudah diterbitkan.",
-      });
+      if (
+        order.order_status === "paid" &&
+        order.payment_status === "paid"
+      ) {
+        return json({
+          success: true,
+          message: "Pembayaran sudah dikonfirmasi dan website sudah diterbitkan.",
+        });
+      }
+
+      return json(
+        {
+          success: false,
+          message: "Status website sudah terbit, tetapi status order atau pembayaran belum konsisten. Perlu pemeriksaan admin.",
+        },
+        409
+      );
     }
 
     if (
       order.website_status !== "draft" &&
       order.website_status !== "preview"
     ) {
-      return NextResponse.json(
+      return json(
         {
           success: false,
           message: `Website tidak bisa diterbitkan karena statusnya ${order.website_status}.`,
         },
-        { status: 409 }
+        409
       );
     }
 
     const now = new Date().toISOString();
 
-    const result = await db.batch([
+    // Ketiga perubahan dijalankan dalam satu batch D1.
+    // Migration 0004 dan 0005 memasang trigger yang membatalkan
+    // seluruh batch jika salah satu transisi status tidak valid.
+    await db.batch([
       db
         .prepare(
           `UPDATE payments
            SET status = 'paid',
                paid_at = COALESCE(paid_at, ?),
                updated_at = ?
-           WHERE id = ? AND status IN ('pending', 'paid')`
+           WHERE id = ?
+             AND status IN ('pending', 'paid')`
         )
         .bind(now, now, order.payment_id),
 
@@ -200,38 +193,61 @@ export async function POST(
                published_at = COALESCE(published_at, ?),
                updated_at = ?
            WHERE id = ?
-             AND status IN ('draft', 'preview')`
+             AND status <> 'published'`
         )
         .bind(now, now, order.website_id),
     ]);
 
+    // Baca ulang keadaan akhir dari database.
+    const finalState = await db
+      .prepare(
+        `SELECT
+           o.status AS order_status,
+           p.status AS payment_status,
+           w.status AS website_status
+         FROM orders o
+         INNER JOIN payments p ON p.id = ?
+         INNER JOIN websites w ON w.id = ?
+         WHERE o.id = ?
+           AND p.order_id = o.id
+           AND w.order_id = o.id
+         LIMIT 1`
+      )
+      .bind(order.payment_id, order.website_id, orderid)
+      .first<{
+        order_status: string;
+        payment_status: string;
+        website_status: string;
+      }>();
+
     if (
-      !result[0]?.meta?.changes ||
-      !result[1]?.meta?.changes ||
-      !result[2]?.meta?.changes
+      !finalState ||
+      finalState.order_status !== "paid" ||
+      finalState.payment_status !== "paid" ||
+      finalState.website_status !== "published"
     ) {
-      return NextResponse.json(
+      return json(
         {
           success: false,
-          message: "Perubahan status tidak berhasil. Muat ulang data pesanan dan periksa kembali.",
+          message: "Konfirmasi belum berhasil. Status pesanan, pembayaran, dan website tidak konsisten.",
         },
-        { status: 409 }
+        409
       );
     }
 
-    return NextResponse.json({
+    return json({
       success: true,
       message: "Pembayaran dikonfirmasi dan website berhasil diterbitkan!",
     });
   } catch (error) {
     console.error("Confirm payment error:", error);
 
-    return NextResponse.json(
+    return json(
       {
         success: false,
-        message: "Gagal mengonfirmasi pembayaran.",
+        message: "Gagal mengonfirmasi pembayaran. Tidak ada konfirmasi sukses yang diberikan.",
       },
-      { status: 500 }
+      500
     );
   }
 }
