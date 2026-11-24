@@ -1,47 +1,112 @@
-# OpenNext Starter
+# webUMKM
 
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+**Platform pembuat website untuk UMKM.**
 
-## Getting Started
+webUMKM adalah aplikasi web yang membantu pelaku Usaha Mikro, Kecil, dan Menengah (UMKM) membuat dan mengelola website bisnis mereka dengan lebih mudah.
 
-Read the documentation at https://opennext.js.org/cloudflare.
+## ✨ Fitur
 
-## Develop
+- **Buat Website** — Membuat website bisnis UMKM.
+- **Preview Website** — Melihat tampilan website sebelum dipublikasikan.
+- **Halaman Publik** — Website dapat diakses melalui URL berdasarkan slug.
+- **Dashboard Admin** — Mengelola data dan aktivitas platform.
+- **Manajemen Pelanggan** — Melihat dan mengelola data pelanggan.
+- **Manajemen Website** — Mengelola website yang dibuat pengguna.
+- **Manajemen Pesanan** — Melihat dan mengelola pesanan.
+- **Pembayaran** — Halaman pembayaran dan preview pembayaran.
+- **Responsive UI** — Tampilan yang menyesuaikan ukuran layar perangkat.
 
-Run the Next.js development server:
+## 🛠️ Teknologi
+
+- Next.js
+- React
+- TypeScript
+- CSS
+- npm
+
+## 🚀 Instalasi
+
+Pastikan Node.js dan npm sudah terpasang di komputer.
+
+1. Clone repository:
+
+   ```bash
+   git clone https://github.com/USERNAME/REPOSITORY.git
+   ```
+
+2. Masuk ke folder project:
+
+   ```bash
+   cd umkm-website-generator
+   ```
+
+3. Install dependencies:
+
+   ```bash
+   npm install
+   ```
+
+4. Jalankan development server:
+
+   ```bash
+   npm run dev
+   ```
+
+5. Buka browser dan akses:
+
+   ```text
+   http://localhost:3000
+   ```
+
+## 📦 Build
+
+Untuk membuat production build:
 
 ```bash
-npm run dev
-# or similar package manager command
+npm run build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-## Preview
-
-Preview the application locally on the Cloudflare runtime:
+Untuk menjalankan production server:
 
 ```bash
-npm run preview
-# or similar package manager command
+npm run start
 ```
 
-## Deploy
+## 🌐 Deployment
 
-Deploy the application to Cloudflare:
+Project ini disiapkan untuk pengembangan dan deployment aplikasi web. Konfigurasi deployment perlu disesuaikan dengan environment dan layanan hosting yang digunakan.
 
-```bash
-npm run deploy
-# or similar package manager command
+## 📁 Struktur Project
+
+```text
+umkm-website-generator/
+├── src/
+│   ├── app/
+│   │   ├── admin/
+│   │   ├── api/
+│   │   ├── buat-website/
+│   │   ├── pembayaran/
+│   │   ├── preview/
+│   │   ├── preview-pembayaran/
+│   │   └── s/
+│   └── components/
+├── public/
+├── package.json
+└── README.md
 ```
 
-## Learn More
+## 🔒 Environment Variables
 
-To learn more about Next.js, take a look at the following resources:
+Jika project membutuhkan konfigurasi environment, buat file `.env.local` berdasarkan variabel yang digunakan aplikasi.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+**Jangan pernah mengunggah API key, password, token, atau informasi rahasia ke repository publik.**
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 📌 Status Project
+
+Project ini masih dalam tahap pengembangan. Fitur dan konfigurasi dapat berubah seiring proses pengembangan.
+
+---
+
+Dibuat untuk membantu UMKM memiliki kehadiran digital dan mengembangkan bisnis secara online.
+
+**webUMKM — Digitalisasi UMKM, Lebih Mudah.**
